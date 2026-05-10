@@ -5,7 +5,12 @@ import { usePathname } from "next/navigation";
 import { MessageSquare, Grid3X3, Upload, Sparkles, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useState } from "react";
 
 const navItems = [
@@ -19,19 +24,23 @@ export function MobileNav() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex md:hidden items-center h-14 border-b px-4">
+    <div className="flex md:hidden items-center h-14 border-b border-border px-4 bg-background">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="hover:bg-accent">
             <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
-          <div className="flex h-14 items-center gap-2 border-b px-4">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <SheetTitle className="font-semibold">提示词优化器</SheetTitle>
+          <div className="flex h-14 items-center gap-2.5 border-b px-5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-sm">
+              <Sparkles className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <SheetTitle className="font-semibold text-sm">
+              提示词优化器
+            </SheetTitle>
           </div>
-          <nav className="flex-1 space-y-1 p-3">
+          <nav className="flex-1 space-y-0.5 p-3">
             {navItems.map((item) => {
               const isActive = pathname.startsWith(item.href);
               return (
@@ -40,9 +49,9 @@ export function MobileNav() {
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                     isActive
-                      ? "bg-accent text-primary"
+                      ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground"
                   )}
                 >
@@ -55,7 +64,9 @@ export function MobileNav() {
         </SheetContent>
       </Sheet>
       <div className="flex items-center gap-2 ml-3">
-        <Sparkles className="h-4 w-4 text-primary" />
+        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary shadow-sm">
+          <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
+        </div>
         <span className="font-semibold text-sm">提示词优化器</span>
       </div>
     </div>

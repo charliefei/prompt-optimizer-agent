@@ -7,27 +7,47 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ExternalLink, Sparkles, CheckCircle2, XCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  ExternalLink,
+  Sparkles,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  BookOpen,
+} from "lucide-react";
 import Link from "next/link";
 
-export default function FrameworkDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function FrameworkDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const { data: framework, isLoading } = useFramework(parseInt(id));
 
   if (isLoading) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="flex flex-1 items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
+          <p className="text-sm text-muted-foreground">加载框架详情...</p>
+        </div>
       </div>
     );
   }
 
   if (!framework) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4">
-        <p className="text-lg text-muted-foreground">框架未找到</p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-background">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+          <BookOpen className="h-7 w-7 text-muted-foreground/40" />
+        </div>
+        <p className="text-base font-medium text-muted-foreground">
+          框架未找到
+        </p>
         <Link href="/frameworks">
-          <Button variant="outline">
+          <Button variant="outline" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
             返回框架库
           </Button>
@@ -37,131 +57,171 @@ export default function FrameworkDetailPage({ params }: { params: Promise<{ id: 
   }
 
   return (
-    <div className="flex flex-1 flex-col p-6 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <Link href="/frameworks" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          返回框架库
-        </Link>
+    <div className="flex flex-1 flex-col p-6 max-w-4xl mx-auto animate-fade-in">
+      {/* Back link */}
+      <Link
+        href="/frameworks"
+        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors group"
+      >
+        <ArrowLeft className="mr-1.5 h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
+        返回框架库
+      </Link>
 
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">{framework.name}</h1>
-            <div className="flex flex-wrap gap-2 mt-3">
-              <ComplexityBadge complexity={framework.complexity} />
-              {framework.domains.map((d) => (
-                <DomainBadge key={d} domain={d} />
-              ))}
-            </div>
-          </div>
-          <Link href={`/chat?frameworkId=${framework.id}`}>
-            <Button>
-              <Sparkles className="mr-2 h-4 w-4" />
-              使用此框架
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {framework.sourceUrl && (
-        <a
-          href={framework.sourceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-sm text-primary hover:underline mb-4"
-        >
-          <ExternalLink className="h-3 w-3" />
-          来源链接
-        </a>
-      )}
-
-      {/* Overview */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>概述</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground leading-relaxed">{framework.overview}</p>
-        </CardContent>
-      </Card>
-
-      {/* Scenarios */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>应用场景</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {framework.scenarios.map((s, i) => (
-              <Badge key={i} variant="outline">
-                {s}
-              </Badge>
+      {/* Hero */}
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            {framework.name}
+          </h1>
+          <div className="flex flex-wrap gap-2 mt-3">
+            <ComplexityBadge complexity={framework.complexity} />
+            {framework.domains.map((d) => (
+              <DomainBadge key={d} domain={d} />
             ))}
           </div>
-        </CardContent>
-      </Card>
+          {framework.sourceUrl && (
+            <a
+              href={framework.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 mt-4 text-sm text-primary hover:underline font-medium"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              查看来源
+            </a>
+          )}
+        </div>
+        <Link href={`/chat?frameworkId=${framework.id}`}>
+          <Button size="lg" className="shadow-sm">
+            <Sparkles className="mr-2 h-4 w-4" />
+            使用此框架
+          </Button>
+        </Link>
+      </div>
 
-      {/* Components */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>框架构成</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 pr-4 font-medium">组成部分</th>
-                  <th className="text-left py-2 pr-4 font-medium">英文</th>
-                  <th className="text-left py-2 font-medium">说明</th>
-                </tr>
-              </thead>
-              <tbody>
-                {framework.components.map((c, i) => (
-                  <tr key={i} className="border-b last:border-0">
-                    <td className="py-2 pr-4 font-medium">{c.name}</td>
-                    <td className="py-2 pr-4 text-muted-foreground">{c.englishName}</td>
-                    <td className="py-2 text-muted-foreground">{c.description}</td>
+      {/* Overview */}
+      <section className="mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">概述</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {framework.overview}
+            </p>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Scenarios */}
+      <section className="mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">应用场景</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {framework.scenarios.map((s, i) => (
+                <Badge key={i} variant="outline" className="text-sm font-normal py-1 px-3">
+                  {s}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Components Table */}
+      <section className="mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">框架构成</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto -mx-2 px-2">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 pr-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                      组成部分
+                    </th>
+                    <th className="text-left py-3 pr-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                      英文
+                    </th>
+                    <th className="text-left py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                      说明
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                </thead>
+                <tbody>
+                  {framework.components.map((c, i) => (
+                    <tr
+                      key={i}
+                      className="border-b border-border/50 last:border-0 transition-colors hover:bg-muted/30"
+                    >
+                      <td className="py-3 pr-4 font-medium text-foreground">
+                        {c.name}
+                      </td>
+                      <td className="py-3 pr-4 text-muted-foreground font-mono text-xs">
+                        {c.englishName}
+                      </td>
+                      <td className="py-3 text-muted-foreground leading-relaxed">
+                        {c.description}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
 
       {/* Detailed Explanations */}
       {framework.detailedExplanations.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>详细说明</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {framework.detailedExplanations.map((d, i) => (
-              <div key={i}>
-                <h3 className="font-medium mb-2">{d.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{d.content}</p>
-                {i < framework.detailedExplanations.length - 1 && <Separator className="mt-4" />}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+        <section className="mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">详细说明</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {framework.detailedExplanations.map((d, i) => (
+                <div key={i}>
+                  <h3 className="font-semibold text-sm mb-2 text-foreground">
+                    {d.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                    {d.content}
+                  </p>
+                  {i < framework.detailedExplanations.length - 1 && (
+                    <Separator className="mt-6" />
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </section>
       )}
 
       {/* Pros & Cons */}
-      <div className="grid gap-6 sm:grid-cols-2 mb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-600 dark:text-green-400">
-              <CheckCircle2 className="h-5 w-5" />
+      <section className="grid gap-6 sm:grid-cols-2 mb-6">
+        <Card className="border-emerald-200/60 dark:border-emerald-800/40">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-base">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
               优点
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2">
+            <ul className="space-y-2.5">
               {framework.pros.map((p, i) => (
-                <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" />
+                <li
+                  key={i}
+                  className="text-sm text-muted-foreground flex items-start gap-2.5 leading-relaxed"
+                >
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500/60" />
                   {p}
                 </li>
               ))}
@@ -169,42 +229,55 @@ export default function FrameworkDetailPage({ params }: { params: Promise<{ id: 
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
-              <XCircle className="h-5 w-5" />
+        <Card className="border-rose-200/60 dark:border-rose-800/40">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-rose-600 dark:text-rose-400 text-base">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-100 dark:bg-rose-900/30">
+                <XCircle className="h-4 w-4" />
+              </div>
               缺点
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2">
+            <ul className="space-y-2.5">
               {framework.cons.map((c, i) => (
-                <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+                <li
+                  key={i}
+                  className="text-sm text-muted-foreground flex items-start gap-2.5 leading-relaxed"
+                >
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500/60" />
                   {c}
                 </li>
               ))}
             </ul>
           </CardContent>
         </Card>
-      </div>
+      </section>
 
       {/* Examples */}
       {framework.examples.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>最佳实践</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {framework.examples.map((ex, i) => (
-              <div key={i}>
-                <h3 className="font-medium mb-2">{ex.title}</h3>
-                <div className="rounded-lg bg-muted p-4 text-sm whitespace-pre-wrap">{ex.content}</div>
-                {i < framework.examples.length - 1 && <Separator className="mt-4" />}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+        <section className="mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">最佳实践</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {framework.examples.map((ex, i) => (
+                <div key={i}>
+                  <h3 className="font-semibold text-sm mb-3 text-foreground">
+                    {ex.title}
+                  </h3>
+                  <div className="rounded-xl bg-muted/70 border border-border/50 p-5 text-sm leading-relaxed whitespace-pre-wrap font-mono text-foreground/85">
+                    {ex.content}
+                  </div>
+                  {i < framework.examples.length - 1 && (
+                    <Separator className="mt-6" />
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </section>
       )}
     </div>
   );

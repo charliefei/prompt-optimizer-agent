@@ -1,18 +1,55 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { ConversationList } from "@/components/chat/conversation-list";
-import { Sparkles, Send, Copy, Check, RotateCcw, Loader2, History } from "lucide-react";
+import {
+  Sparkles,
+  Send,
+  Copy,
+  Check,
+  RotateCcw,
+  Loader2,
+  History,
+  ChevronDown,
+} from "lucide-react";
 import { useChat } from "@/hooks/use-chat";
-import type { ChatMessage, ChatStreamEvent } from "@/types/chat";
+import type { ChatMessage } from "@/types/chat";
 
+/* ── Typing Indicator ─────────────────────────────────── */
+function TypingIndicator() {
+  return (
+    <div className="flex justify-start animate-fade-in-up">
+      <div className="flex items-center gap-1.5 rounded-2xl bg-muted px-4 py-3">
+        <span
+          className="h-2 w-2 rounded-full bg-foreground/30 animate-typing-dot"
+          style={{ animationDelay: "0ms" }}
+        />
+        <span
+          className="h-2 w-2 rounded-full bg-foreground/30 animate-typing-dot"
+          style={{ animationDelay: "200ms" }}
+        />
+        <span
+          className="h-2 w-2 rounded-full bg-foreground/30 animate-typing-dot"
+          style={{ animationDelay: "400ms" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ── Message Bubble ───────────────────────────────────── */
 function MessageBubble({ message }: { message: ChatMessage }) {
   const [copied, setCopied] = useState(false);
 
@@ -22,45 +59,65 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  /* ── User message ── */
   if (message.role === "user") {
     return (
-      <div className="flex justify-end">
-        <div className="max-w-[80%] rounded-2xl bg-primary px-4 py-2.5 text-primary-foreground">
-          <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+      <div className="flex justify-end animate-fade-in-up">
+        <div className="max-w-[75%] rounded-2xl rounded-br-md bg-primary px-4 py-3 text-primary-foreground shadow-sm">
+          <p className="whitespace-pre-wrap text-sm leading-relaxed">
+            {message.content}
+          </p>
         </div>
       </div>
     );
   }
 
+  /* ── Framework recommendation ── */
   if (message.type === "framework_recommendation" && message.framework) {
     return (
-      <div className="flex justify-start">
-        <Card className="max-w-[80%] border-primary/20">
+      <div className="flex justify-start animate-fade-in-up">
+        <Card className="max-w-[80%] overflow-hidden border-l-[3px] border-l-primary shadow-sm">
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">推荐框架</span>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                推荐框架
+              </span>
             </div>
-            <h3 className="font-semibold text-lg mb-1">{message.framework.name}</h3>
-            <p className="text-sm text-muted-foreground mb-3">{message.framework.reason}</p>
-            {message.content && <p className="text-sm">{message.content}</p>}
+            <h3 className="font-semibold text-base mb-1.5">
+              {message.framework.name}
+            </h3>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+              {message.framework.reason}
+            </p>
+            {message.content && (
+              <p className="text-sm text-foreground/80">{message.content}</p>
+            )}
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  /* ── Clarification questions ── */
   if (message.type === "clarification" && message.questions) {
     return (
-      <div className="flex justify-start">
-        <Card className="max-w-[85%]">
+      <div className="flex justify-start animate-fade-in-up">
+        <Card className="max-w-[85%] shadow-sm">
           <CardContent className="p-4">
-            <p className="text-sm font-medium mb-3">我需要了解更多信息：</p>
-            <ol className="space-y-2">
+            <div className="flex items-center gap-2 mb-3">
+              <ChevronDown className="h-4 w-4 text-amber-500" />
+              <p className="text-sm font-medium">需要补充一些信息</p>
+            </div>
+            <ol className="space-y-2.5">
               {message.questions.map((q, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm">
-                  <Badge variant="secondary" className="mt-0.5 shrink-0">{i + 1}</Badge>
-                  <span>{q}</span>
+                <li key={i} className="flex items-start gap-3 text-sm">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                    {i + 1}
+                  </span>
+                  <span className="leading-relaxed pt-px">{q}</span>
                 </li>
               ))}
             </ol>
@@ -70,40 +127,117 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     );
   }
 
+  /* ── Prompt preview ── */
   if (message.type === "prompt_preview") {
     return (
-      <div className="flex justify-start">
-        <Card className="max-w-[85%] border-green-200 dark:border-green-800">
+      <div className="flex justify-start animate-fade-in-up">
+        <Card className="max-w-[85%] overflow-hidden border-emerald-200 dark:border-emerald-800 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-600" />
+                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-100 dark:bg-emerald-900/40">
+                  <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                </div>
                 <span className="text-sm font-medium">优化后的提示词</span>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => copyToClipboard(message.content)}
+                className="h-7 text-xs gap-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
               >
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                {copied ? (
+                  <>
+                    <Check className="h-3 w-3 text-emerald-500" />
+                    已复制
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3 w-3" />
+                    复制
+                  </>
+                )}
               </Button>
             </div>
-            <div className="rounded-lg bg-muted p-4 text-sm whitespace-pre-wrap">{message.content}</div>
+            <div className="rounded-lg bg-muted/70 p-4 text-sm leading-relaxed whitespace-pre-wrap font-mono text-foreground/85 border border-border/50">
+              {message.content}
+            </div>
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  /* ── Default assistant text ── */
   return (
-    <div className="flex justify-start">
-      <div className="max-w-[80%] rounded-2xl bg-muted px-4 py-2.5">
-        <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+    <div className="flex justify-start animate-fade-in-up">
+      <div className="max-w-[80%] rounded-2xl rounded-bl-md bg-muted px-4 py-3">
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/85">
+          {message.content}
+        </p>
       </div>
     </div>
   );
 }
 
+/* ── Welcome Screen ───────────────────────────────────── */
+function WelcomeScreen({ onSend }: { onSend: (msg: string) => void }) {
+  const suggestions = [
+    {
+      title: "产品描述优化",
+      desc: "帮我写一个用于电商产品描述的提示词",
+      icon: "📦",
+    },
+    {
+      title: "代码审查助手",
+      desc: "生成一个用于代码审查的 system prompt",
+      icon: "🔍",
+    },
+    {
+      title: "营销文案创作",
+      desc: "创建用于社交媒体营销文案的提示词框架",
+      icon: "✍️",
+    },
+    {
+      title: "数据分析指导",
+      desc: "帮我构建一个数据分析报告的提示词模板",
+      icon: "📊",
+    },
+  ];
+
+  return (
+    <div className="flex flex-col items-center justify-center flex-1 px-4 py-12">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-5 animate-float">
+        <Sparkles className="h-8 w-8 text-primary" />
+      </div>
+      <h2 className="text-xl font-semibold mb-2 text-foreground">
+        开始优化你的提示词
+      </h2>
+      <p className="text-sm text-muted-foreground mb-8 text-center max-w-sm">
+        描述你的需求，AI 将自动匹配最佳提示词框架并为你生成优化结果
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2 w-full max-w-lg">
+        {suggestions.map((s, i) => (
+          <button
+            key={i}
+            onClick={() => onSend(s.desc)}
+            className="group flex flex-col gap-1 rounded-xl border border-border/60 bg-card px-4 py-3 text-left transition-all duration-200 hover:border-primary/30 hover:shadow-sm hover:-translate-y-0.5"
+          >
+            <span className="text-lg">{s.icon}</span>
+            <span className="text-sm font-medium group-hover:text-primary transition-colors">
+              {s.title}
+            </span>
+            <span className="text-xs text-muted-foreground line-clamp-1">
+              {s.desc}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Main Chat Page ───────────────────────────────────── */
 function ChatPageContent() {
   const searchParams = useSearchParams();
   const preselectedFramework = searchParams.get("frameworkId");
@@ -122,17 +256,28 @@ function ChatPageContent() {
 
   const [input, setInput] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const handleSend = () => {
-    if (!input.trim() || isStreaming) return;
-    sendMessage(input.trim(), preselectedFramework || undefined);
+  const handleSend = (msg?: string) => {
+    const text = msg || input.trim();
+    if (!text || isStreaming) return;
+    sendMessage(text, preselectedFramework || undefined);
     setInput("");
   };
 
+  /* Auto-scroll to bottom when new messages arrive */
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isStreaming, messagesEndRef]);
+
+  const hasMessages = messages.length > 0;
+
   return (
-    <div className="flex flex-1 flex-col h-full">
+    <div className="flex flex-1 flex-col h-full bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between border-b px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border/60 bg-background/80 backdrop-blur-sm px-4 py-3 shrink-0">
         <div className="flex items-center gap-2">
           <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
             <SheetTrigger asChild>
@@ -157,53 +302,72 @@ function ChatPageContent() {
               />
             </SheetContent>
           </Sheet>
-          <Sparkles className="h-5 w-5 text-primary" />
-          <h1 className="font-semibold">提示词优化</h1>
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <h1 className="font-semibold text-sm">提示词优化</h1>
         </div>
-        <Button variant="ghost" size="sm" onClick={startNewThread}>
-          <RotateCcw className="h-4 w-4 mr-1" />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={startNewThread}
+          className="text-xs"
+        >
+          <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
           新对话
         </Button>
       </div>
 
-      {/* Messages */}
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4 max-w-3xl mx-auto">
-          {messages.map((msg) => (
-            <MessageBubble key={msg.id} message={msg} />
-          ))}
-          {isStreaming && (
-            <div className="flex justify-start">
-              <div className="rounded-2xl bg-muted px-4 py-2.5">
-                <Loader2 className="h-4 w-4 animate-spin" />
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-      </ScrollArea>
+      {/* Messages Area */}
+      {hasMessages ? (
+        <ScrollArea className="flex-1" ref={scrollRef}>
+          <div className="space-y-5 max-w-3xl mx-auto px-4 py-6">
+            {messages.map((msg) => (
+              <MessageBubble key={msg.id} message={msg} />
+            ))}
+            {isStreaming && <TypingIndicator />}
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+      ) : (
+        <WelcomeScreen onSend={handleSend} />
+      )}
 
-      {/* Input */}
-      <div className="border-t p-4">
-        <div className="max-w-3xl mx-auto flex gap-2">
-          <Textarea
-            placeholder="描述你的需求，例如：帮我写一个用于产品描述的提示词..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            rows={1}
-            className="min-h-[44px] max-h-32 resize-none"
-            disabled={isStreaming}
-          />
-          <Button onClick={handleSend} disabled={!input.trim() || isStreaming} size="icon" className="shrink-0">
-            <Send className="h-4 w-4" />
+      {/* Input Area */}
+      <div className="border-t border-border/60 bg-background/80 backdrop-blur-sm p-4 shrink-0">
+        <div className="max-w-3xl mx-auto flex gap-3 items-end">
+          <div className="flex-1 relative">
+            <Textarea
+              placeholder="描述你的需求，例如：帮我写一个用于产品描述的提示词..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              rows={1}
+              className="min-h-[46px] max-h-32 resize-none rounded-xl pr-4 border-border/60 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all text-sm"
+              disabled={isStreaming}
+            />
+          </div>
+          <Button
+            onClick={() => handleSend()}
+            disabled={!input.trim() || isStreaming}
+            size="icon"
+            className="h-[46px] w-[46px] shrink-0 rounded-xl shadow-sm transition-all duration-200 disabled:opacity-40"
+          >
+            {isStreaming ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </div>
+        <p className="text-xs text-muted-foreground/50 text-center mt-2.5">
+          Enter 发送 · Shift + Enter 换行
+        </p>
       </div>
     </div>
   );
@@ -213,8 +377,11 @@ export default function ChatPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex flex-1 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="flex flex-1 items-center justify-center bg-background">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
+            <p className="text-sm text-muted-foreground">加载中...</p>
+          </div>
         </div>
       }
     >
