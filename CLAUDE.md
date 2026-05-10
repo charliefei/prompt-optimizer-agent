@@ -77,9 +77,27 @@ When the clarify node sends questions, the agent ends execution. The frontend re
 - Frontend chat state uses `localStorage` with prefix `chat:msg:` for messages and `chat:threads` / `chat:active` for thread metadata.
 - The `ThreadMeta.title` is derived from the first user message, truncated to 50 characters.
 
+## Bugfix Records
+
+Bugfix documentation is maintained in [`docs/bugfix/`](docs/bugfix/). Each file covers a cluster of related fixes with symptoms, root cause analysis, and resolutions. After completing a bugfix session, write a summary document and update the index below.
+
+| Date | File | Summary |
+|------|------|---------|
+| 2026-05-10 | [clarify-state-coherence.md](docs/bugfix/2026-05-10-clarify-state-coherence.md) | Clarify node context coherence, `clarificationHistory` duplication, `activeThreadId` loss on remount, `collectedInfo` undefined guard, sidebar hydration mismatch |
+
+### Bugfix Document Conventions
+
+- **File naming:** `YYYY-MM-DD-<brief-slug>.md`
+- **Sections per bug:** Symptoms → Root Cause → Fix → Files changed
+- **End with:** Prevention notes — what patterns or practices would prevent similar bugs
+- **Update the index:** Add a row to the table above after writing a new bugfix document
+
+---
+
 ## Gotchas
 
 - The clarify node pauses the agent and sends questions; the frontend must send a **new HTTP request** with the same `threadId` to resume — LangGraph's `MemorySaver` restores the checkpoint. The user's answer goes in as a new `HumanMessage`.
+- **MemorySaver is in-memory only** — all checkpoints are lost on server restart, dev server HMR, or module recompilation. A stale `threadId` sent after restart will hit an empty checkpoint. See [bugfix 2026-05-10](docs/bugfix/2026-05-10-clarify-state-coherence.md) for details and mitigations.
 - User-uploaded frameworks are scored 0-100; the `/api/upload` endpoint rejects those below the threshold (default 60, configurable via `threshold` form field).
 - Framework markdown files in `prompt-optimizer/references/frameworks/` must follow a specific structure (`## 概述`, `## 框架构成` as table, `## 详细说明`, `## 优点`, `## 缺点`, `## 最佳实践`) — the parser depends on these exact H2 headings.
 - `@langchain/*` packages are listed in `next.config.ts` as `serverExternalPackages` — removing them will break the agent at runtime.

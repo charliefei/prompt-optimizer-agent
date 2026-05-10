@@ -27,12 +27,17 @@ export async function clarifyNode(state: {
     .map(([key, value]) => `- ${key}: ${value}`)
     .join("\n");
 
-  // Record the Q&A pair from the previous round before building the prompt
+  // Record the Q&A pair from the previous round before building the prompt.
+  // Only return the NEW pair (single-element array) — the reducer concatenates,
+  // so returning the full history would duplicate entries on every round.
   let qaHistory = state.clarificationHistory || [];
+  let newQAPair: Array<{question: string; answer: string}> = [];
   if (state.clarificationRound > 0 && state.lastQuestion) {
     const raw = state.messages[state.messages.length - 1].content;
     const answerContent = typeof raw === "string" ? raw : String(raw);
-    qaHistory = [...qaHistory, { question: state.lastQuestion, answer: answerContent }];
+    const pair = { question: state.lastQuestion, answer: answerContent };
+    qaHistory = [...qaHistory, pair];
+    newQAPair = [pair];
   }
 
   // Use the original request (first message), not the last clarification answer
@@ -85,7 +90,7 @@ export async function clarifyNode(state: {
     return {
       clarificationComplete: true,
       collectedInfo: { ...safeCollectedInfo, ...parsed.newInfo },
-      clarificationHistory: qaHistory,
+      clarificationHistory: newQAPair,
       phase: "generate",
     };
   }
@@ -113,7 +118,7 @@ export async function clarifyNode(state: {
     return {
       clarificationComplete: true,
       collectedInfo: { ...safeCollectedInfo, ...parsed.newInfo },
-      clarificationHistory: qaHistory,
+      clarificationHistory: newQAPair,
       phase: "generate",
     };
   }
@@ -128,7 +133,7 @@ export async function clarifyNode(state: {
   return {
     clarificationRound: state.clarificationRound + 1,
     collectedInfo: { ...safeCollectedInfo, ...parsed.newInfo },
-    clarificationHistory: qaHistory,
+    clarificationHistory: newQAPair,
     lastQuestion: question,
     lastOptions: options,
     phase: "clarify",

@@ -68,7 +68,10 @@ function deleteMessages(threadId: string) {
 
 export function useChat() {
   const [threads, setThreads] = useState<ThreadMeta[]>([]);
-  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(ACTIVE_KEY);
+  });
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     if (typeof window === "undefined") return [{ ...WELCOME, timestamp: Date.now() }];
     const activeId = localStorage.getItem(ACTIVE_KEY);
