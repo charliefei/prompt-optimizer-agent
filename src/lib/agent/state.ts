@@ -26,6 +26,8 @@ export const AgentState = Annotation.Root({
   clarificationRound: Annotation<number>,
   clarificationComplete: Annotation<boolean>,
   collectedInfo: Annotation<Record<string, string>>,
+  lastQuestion: Annotation<string | null>,
+  lastOptions: Annotation<string[] | null>,
   optimizedPrompt: Annotation<string | null>,
   writer: Annotation<((data: unknown) => void) | null>,
 });
