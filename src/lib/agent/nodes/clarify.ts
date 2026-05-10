@@ -11,6 +11,7 @@ export async function clarifyNode(state: {
   collectedInfo: Record<string, string>;
   clarificationHistory?: Array<{question: string; answer: string}>;
   lastQuestion?: string | null;
+  frameworkDetail?: string | null;
   writer?: (data: unknown) => void;
 }) {
   const llm = getLLM();
@@ -52,7 +53,7 @@ export async function clarifyNode(state: {
   const response = await llm.invoke([
     new SystemMessage(CLARIFY_SYSTEM_PROMPT),
     new HumanMessage(
-      `## 用户原始需求\n\n${originalRequest}\n\n## 分析结果\n\n${JSON.stringify(state.analysis, null, 2)}\n\n## 已收集的信息\n\n${collectedInfoStr || "暂无"}\n\n## 历史问答\n\n${qaHistoryStr}\n\n## 澄清轮次\n\n第 ${state.clarificationRound + 1} 轮\n\n请判断是否需要继续澄清。如果需要，只问1个最关键的问题，并给出2-3个推荐选项。`
+      `## 用户原始需求\n\n${originalRequest}\n\n## 分析结果\n\n${JSON.stringify(state.analysis, null, 2)}\n\n## 选定框架详情\n\n${state.frameworkDetail || "暂无"}\n\n## 已收集的信息\n\n${collectedInfoStr || "暂无"}\n\n## 历史问答\n\n${qaHistoryStr}\n\n## 澄清轮次\n\n第 ${state.clarificationRound + 1} 轮\n\n请参考选定框架的结构和槽位，判断是否需要继续澄清。如果需要，只问1个最关键的问题，并给出2-3个推荐选项。`
     ),
   ]);
 
