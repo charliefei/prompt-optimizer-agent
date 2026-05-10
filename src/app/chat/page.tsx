@@ -58,9 +58,114 @@ function TypingIndicator() {
 }
 
 /* ═════════════════════════════════════════════════════════
+   Clarification Card
+   ═════════════════════════════════════════════════════════ */
+function ClarificationCard({
+  question,
+  options,
+  onAnswer,
+  disabled,
+}: {
+  question: string;
+  options: string[];
+  onAnswer: (answer: string) => void;
+  disabled: boolean;
+}) {
+  const [customInput, setCustomInput] = useState("");
+  const [answered, setAnswered] = useState(false);
+
+  const handleOptionClick = (option: string) => {
+    if (answered || disabled) return;
+    setAnswered(true);
+    onAnswer(option);
+  };
+
+  const handleCustomSend = () => {
+    const text = customInput.trim();
+    if (!text || answered || disabled) return;
+    setAnswered(true);
+    onAnswer(text);
+  };
+
+  return (
+    <div className="flex justify-start animate-fade-in-up">
+      <Card className="max-w-[85%] shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <ChevronDown className="h-4 w-4 text-amber-500" />
+            <p className="text-sm font-medium">需要补充一些信息</p>
+          </div>
+          <p className="text-sm font-medium mb-3 leading-relaxed">{question}</p>
+
+          {!answered && (
+            <>
+              {options.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {options.map((opt, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleOptionClick(opt)}
+                      disabled={disabled}
+                      className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium
+                        bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20
+                        transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2 items-end">
+                <div className="flex-1 relative">
+                  <Textarea
+                    placeholder="或输入自定义回答..."
+                    value={customInput}
+                    onChange={(e) => setCustomInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleCustomSend();
+                      }
+                    }}
+                    rows={1}
+                    className="min-h-[38px] max-h-24 resize-none rounded-lg pr-3 border-border/60 bg-muted/50 text-sm"
+                    disabled={disabled}
+                  />
+                </div>
+                {customInput.trim() && (
+                  <Button
+                    onClick={handleCustomSend}
+                    disabled={disabled}
+                    size="sm"
+                    className="h-[38px] shrink-0 rounded-lg"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+
+          {answered && (
+            <p className="text-xs text-muted-foreground mt-1">已收到回答 ✓</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* ═════════════════════════════════════════════════════════
    Message Bubble
    ═════════════════════════════════════════════════════════ */
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({
+  message,
+  onClarifyAnswer,
+}: {
+  message: ChatMessage;
+  onClarifyAnswer?: (answer: string) => void;
+}) {
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = (text: string) => {
@@ -106,6 +211,17 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           </CardContent>
         </Card>
       </div>
+    );
+  }
+
+  if (message.type === "clarification" && message.question) {
+    return (
+      <ClarificationCard
+        question={message.question}
+        options={message.options || []}
+        onAnswer={(answer) => onClarifyAnswer?.(answer)}
+        disabled={false}
+      />
     );
   }
 
@@ -475,7 +591,11 @@ function ChatPageContent() {
           <ScrollArea className="flex-1">
             <div className="space-y-5 max-w-3xl mx-auto px-4 py-6">
               {messages.map((msg) => (
-                <MessageBubble key={msg.id} message={msg} />
+                <MessageBubble
+                  key={msg.id}
+                  message={msg}
+                  onClarifyAnswer={(answer) => sendMessage(answer)}
+                />
               ))}
               {isStreaming && <TypingIndicator />}
               <div ref={messagesEndRef} />
