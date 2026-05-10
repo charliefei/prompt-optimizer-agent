@@ -454,11 +454,17 @@ function ChatPageContent() {
   const [input, setInput] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  /* Sidebar collapse state — persist to localStorage */
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("chat:sidebar-collapsed") === "true";
-  });
+  /* Sidebar collapse state — persist to localStorage.
+     Initialize to false so server and client agree on first render;
+     sync from localStorage in useEffect to avoid hydration mismatch. */
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("chat:sidebar-collapsed");
+      if (stored === "true") setSidebarCollapsed(true);
+    } catch {}
+  }, []);
 
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed((prev) => {
