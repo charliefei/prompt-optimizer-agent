@@ -203,6 +203,8 @@ export function useChat() {
                 type: event.type,
                 content: event.content || "",
                 framework: event.framework,
+                question: event.question,
+                options: event.options,
                 questions: event.questions,
                 timestamp: Date.now(),
               };
