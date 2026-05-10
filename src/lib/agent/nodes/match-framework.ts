@@ -1,4 +1,5 @@
 import { matchFrameworks } from "../tools/match-framework-tool";
+import { log, logState } from "../logging";
 import type { Analysis, FrameworkMatch } from "../state";
 
 export async function matchFrameworkNode(state: {
@@ -6,12 +7,20 @@ export async function matchFrameworkNode(state: {
   selectedFramework: FrameworkMatch | null;
   writer?: (data: unknown) => void;
 }) {
+  logState("matchFramework", {
+    hasAnalysis: state.analysis !== null,
+    hasPreselected: state.selectedFramework !== null,
+    preselectedName: state.selectedFramework?.name || null,
+  });
+
   // If user already selected a framework, skip matching
   if (state.selectedFramework) {
+    log("matchFramework", `User preselected framework "${state.selectedFramework.name}" → load_framework`);
     return { phase: "load_framework" };
   }
 
   if (!state.analysis) {
+    log("matchFramework", "No analysis available → clarify");
     return { phase: "clarify" };
   }
 
@@ -20,6 +29,7 @@ export async function matchFrameworkNode(state: {
   const matches = await matchFrameworks(state.analysis);
 
   if (matches.length === 0) {
+    log("matchFramework", "No frameworks matched → clarify");
     return {
       phase: "clarify",
       selectedFramework: null,
@@ -28,6 +38,8 @@ export async function matchFrameworkNode(state: {
 
   // Auto-select the best match
   const best = matches[0];
+  const top3 = matches.slice(0, 3).map((m) => `${m.name}(${m.reason})`).join(", ");
+  log("matchFramework", `Top matches: [${top3}]`);
 
   state.writer?.({
     type: "framework_recommendation",
@@ -35,6 +47,7 @@ export async function matchFrameworkNode(state: {
     framework: best,
   });
 
+  log("matchFramework", `Selected "${best.name}" (id=${best.id}) → load_framework`);
   return {
     selectedFramework: best,
     phase: "load_framework",
