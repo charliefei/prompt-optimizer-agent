@@ -1,12 +1,13 @@
 "use client";
 
-import { Suspense, useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
@@ -23,11 +24,18 @@ import {
   Loader2,
   History,
   ChevronDown,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  MessageSquare,
 } from "lucide-react";
-import { useChat } from "@/hooks/use-chat";
+import { useChat, type ThreadMeta } from "@/hooks/use-chat";
+import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/types/chat";
 
-/* ── Typing Indicator ─────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════
+   Typing Indicator
+   ═════════════════════════════════════════════════════════ */
 function TypingIndicator() {
   return (
     <div className="flex justify-start animate-fade-in-up">
@@ -49,7 +57,9 @@ function TypingIndicator() {
   );
 }
 
-/* ── Message Bubble ───────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════
+   Message Bubble
+   ═════════════════════════════════════════════════════════ */
 function MessageBubble({ message }: { message: ChatMessage }) {
   const [copied, setCopied] = useState(false);
 
@@ -59,7 +69,6 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  /* ── User message ── */
   if (message.role === "user") {
     return (
       <div className="flex justify-end animate-fade-in-up">
@@ -72,7 +81,6 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     );
   }
 
-  /* ── Framework recommendation ── */
   if (message.type === "framework_recommendation" && message.framework) {
     return (
       <div className="flex justify-start animate-fade-in-up">
@@ -101,7 +109,6 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     );
   }
 
-  /* ── Clarification questions ── */
   if (message.type === "clarification" && message.questions) {
     return (
       <div className="flex justify-start animate-fade-in-up">
@@ -127,7 +134,6 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     );
   }
 
-  /* ── Prompt preview ── */
   if (message.type === "prompt_preview") {
     return (
       <div className="flex justify-start animate-fade-in-up">
@@ -148,13 +154,11 @@ function MessageBubble({ message }: { message: ChatMessage }) {
               >
                 {copied ? (
                   <>
-                    <Check className="h-3 w-3 text-emerald-500" />
-                    已复制
+                    <Check className="h-3 w-3 text-emerald-500" /> 已复制
                   </>
                 ) : (
                   <>
-                    <Copy className="h-3 w-3" />
-                    复制
+                    <Copy className="h-3 w-3" /> 复制
                   </>
                 )}
               </Button>
@@ -168,7 +172,6 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     );
   }
 
-  /* ── Default assistant text ── */
   return (
     <div className="flex justify-start animate-fade-in-up">
       <div className="max-w-[80%] rounded-2xl rounded-bl-md bg-muted px-4 py-3">
@@ -180,7 +183,9 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   );
 }
 
-/* ── Welcome Screen ───────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════
+   Welcome Screen
+   ═════════════════════════════════════════════════════════ */
 function WelcomeScreen({ onSend }: { onSend: (msg: string) => void }) {
   const suggestions = [
     {
@@ -237,7 +242,81 @@ function WelcomeScreen({ onSend }: { onSend: (msg: string) => void }) {
   );
 }
 
-/* ── Main Chat Page ───────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════
+   Collapsed Sidebar (icon strip)
+   ═════════════════════════════════════════════════════════ */
+function CollapsedSidebar({
+  threads,
+  activeThreadId,
+  onSelect,
+  onNew,
+  onExpand,
+}: {
+  threads: ThreadMeta[];
+  activeThreadId: string | null;
+  onSelect: (id: string) => void;
+  onNew: () => void;
+  onExpand: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center h-full py-3 gap-1.5 w-full">
+      {/* Expand button */}
+      <button
+        onClick={onExpand}
+        className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-200"
+        title="展开侧边栏"
+      >
+        <PanelLeftOpen className="h-4 w-4" />
+      </button>
+
+      {/* New conversation */}
+      <button
+        onClick={onNew}
+        className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-200"
+        title="新建对话"
+      >
+        <Plus className="h-4 w-4" />
+      </button>
+
+      <Separator className="w-8 my-2" />
+
+      {/* Conversation dots */}
+      <ScrollArea className="flex-1 w-full">
+        <div className="flex flex-col items-center gap-1.5 py-1 px-2">
+          {threads.length === 0 ? (
+            <div className="flex items-center justify-center h-full py-8">
+              <MessageSquare className="h-3.5 w-3.5 text-muted-foreground/25" />
+            </div>
+          ) : (
+            threads.map((t) => {
+              const isActive = t.threadId === activeThreadId;
+              const initial = t.title.trim().charAt(0);
+              return (
+                <button
+                  key={t.threadId}
+                  onClick={() => onSelect(t.threadId)}
+                  title={t.title}
+                  className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium transition-all duration-200",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm scale-110"
+                      : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground hover:scale-105"
+                  )}
+                >
+                  {initial}
+                </button>
+              );
+            })
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+/* ═════════════════════════════════════════════════════════
+   Main Chat Page
+   ═════════════════════════════════════════════════════════ */
 function ChatPageContent() {
   const searchParams = useSearchParams();
   const preselectedFramework = searchParams.get("frameworkId");
@@ -256,7 +335,20 @@ function ChatPageContent() {
 
   const [input, setInput] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+
+  /* Sidebar collapse state — persist to localStorage */
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("chat:sidebar-collapsed") === "true";
+  });
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("chat:sidebar-collapsed", String(next));
+      return next;
+    });
+  }, []);
 
   const handleSend = (msg?: string) => {
     const text = msg || input.trim();
@@ -265,7 +357,7 @@ function ChatPageContent() {
     setInput("");
   };
 
-  /* Auto-scroll to bottom when new messages arrive */
+  /* Auto-scroll to bottom */
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -275,99 +367,160 @@ function ChatPageContent() {
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="flex flex-1 flex-col h-full bg-background">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-border/60 bg-background/80 backdrop-blur-sm px-4 py-3 shrink-0">
-        <div className="flex items-center gap-2">
-          <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" title="对话历史">
-                <History className="h-4 w-4" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0">
-              <SheetTitle className="sr-only">对话历史</SheetTitle>
-              <ConversationList
-                threads={threads}
-                activeThreadId={activeThreadId}
-                onSelect={(id) => {
-                  switchThread(id);
-                  setHistoryOpen(false);
-                }}
-                onDelete={deleteThread}
-                onNew={() => {
-                  startNewThread();
-                  setHistoryOpen(false);
-                }}
-              />
-            </SheetContent>
-          </Sheet>
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-          </div>
-          <h1 className="font-semibold text-sm">提示词优化</h1>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={startNewThread}
-          className="text-xs"
-        >
-          <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-          新对话
-        </Button>
-      </div>
+    <div className="flex flex-1 h-full overflow-hidden">
+      {/* ═══ Desktop Sidebar ═══ */}
+      <aside
+        className={cn(
+          "hidden md:flex flex-col border-r border-border/60 bg-sidebar shrink-0 transition-all duration-300 ease-in-out overflow-hidden",
+          sidebarCollapsed ? "w-14" : "w-72"
+        )}
+      >
+        {sidebarCollapsed ? (
+          <CollapsedSidebar
+            threads={threads}
+            activeThreadId={activeThreadId}
+            onSelect={switchThread}
+            onNew={startNewThread}
+            onExpand={toggleSidebar}
+          />
+        ) : (
+          <ConversationList
+            threads={threads}
+            activeThreadId={activeThreadId}
+            onSelect={switchThread}
+            onDelete={deleteThread}
+            onNew={startNewThread}
+            sidebarMode={
+              <button
+                onClick={toggleSidebar}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-all duration-200 shrink-0"
+                title="收起侧边栏"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </button>
+            }
+          />
+        )}
+      </aside>
 
-      {/* Messages Area */}
-      {hasMessages ? (
-        <ScrollArea className="flex-1" ref={scrollRef}>
-          <div className="space-y-5 max-w-3xl mx-auto px-4 py-6">
-            {messages.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} />
-            ))}
-            {isStreaming && <TypingIndicator />}
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
-      ) : (
-        <WelcomeScreen onSend={handleSend} />
-      )}
+      {/* ═══ Main Chat Area ═══ */}
+      <div className="flex flex-1 flex-col h-full min-w-0 bg-background">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border/60 bg-background/80 backdrop-blur-sm px-4 py-3 shrink-0 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Desktop: sidebar toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSidebar}
+              className="hidden md:inline-flex shrink-0"
+              title={sidebarCollapsed ? "展开侧边栏" : "收起侧边栏"}
+            >
+              {sidebarCollapsed ? (
+                <PanelLeftOpen className="h-4 w-4" />
+              ) : (
+                <PanelLeftClose className="h-4 w-4" />
+              )}
+            </Button>
 
-      {/* Input Area */}
-      <div className="border-t border-border/60 bg-background/80 backdrop-blur-sm p-4 shrink-0">
-        <div className="max-w-3xl mx-auto flex gap-3 items-end">
-          <div className="flex-1 relative">
-            <Textarea
-              placeholder="描述你的需求，例如：帮我写一个用于产品描述的提示词..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              rows={1}
-              className="min-h-[46px] max-h-32 resize-none rounded-xl pr-4 border-border/60 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all text-sm"
-              disabled={isStreaming}
-            />
+            {/* Mobile: history sheet trigger */}
+            <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="对话历史"
+                  className="md:hidden shrink-0"
+                >
+                  <History className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-0">
+                <SheetTitle className="sr-only">对话历史</SheetTitle>
+                <ConversationList
+                  threads={threads}
+                  activeThreadId={activeThreadId}
+                  onSelect={(id) => {
+                    switchThread(id);
+                    setHistoryOpen(false);
+                  }}
+                  onDelete={deleteThread}
+                  onNew={() => {
+                    startNewThread();
+                    setHistoryOpen(false);
+                  }}
+                />
+              </SheetContent>
+            </Sheet>
+
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 shrink-0">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <h1 className="font-semibold text-sm truncate">提示词优化</h1>
           </div>
+
           <Button
-            onClick={() => handleSend()}
-            disabled={!input.trim() || isStreaming}
-            size="icon"
-            className="h-[46px] w-[46px] shrink-0 rounded-xl shadow-sm transition-all duration-200 disabled:opacity-40"
+            variant="ghost"
+            size="sm"
+            onClick={startNewThread}
+            className="text-xs shrink-0"
           >
-            {isStreaming ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+            新对话
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground/50 text-center mt-2.5">
-          Enter 发送 · Shift + Enter 换行
-        </p>
+
+        {/* Messages */}
+        {hasMessages ? (
+          <ScrollArea className="flex-1">
+            <div className="space-y-5 max-w-3xl mx-auto px-4 py-6">
+              {messages.map((msg) => (
+                <MessageBubble key={msg.id} message={msg} />
+              ))}
+              {isStreaming && <TypingIndicator />}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+        ) : (
+          <WelcomeScreen onSend={handleSend} />
+        )}
+
+        {/* Input */}
+        <div className="border-t border-border/60 bg-background/80 backdrop-blur-sm p-4 shrink-0">
+          <div className="max-w-3xl mx-auto flex gap-3 items-end">
+            <div className="flex-1 relative">
+              <Textarea
+                placeholder="描述你的需求，例如：帮我写一个用于产品描述的提示词..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                rows={1}
+                className="min-h-[46px] max-h-32 resize-none rounded-xl pr-4 border-border/60 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all text-sm"
+                disabled={isStreaming}
+              />
+            </div>
+            <Button
+              onClick={() => handleSend()}
+              disabled={!input.trim() || isStreaming}
+              size="icon"
+              className="h-[46px] w-[46px] shrink-0 rounded-xl shadow-sm transition-all duration-200 disabled:opacity-40"
+            >
+              {isStreaming ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground/50 text-center mt-2.5">
+            Enter 发送 · Shift + Enter 换行
+          </p>
+        </div>
       </div>
     </div>
   );
