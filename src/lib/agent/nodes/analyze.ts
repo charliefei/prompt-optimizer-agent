@@ -3,7 +3,18 @@ import { getLLM } from "@/lib/llm/client";
 import { ANALYZE_SYSTEM_PROMPT } from "../prompts/analyze";
 import type { Analysis } from "../state";
 
-export async function analyzeNode(state: { messages: { content: string }[]; writer?: (data: unknown) => void }) {
+export async function analyzeNode(state: {
+  messages: { content: string }[];
+  analysis: Analysis | null;
+  clarificationRound: number;
+  writer?: (data: unknown) => void;
+}) {
+  // Skip re-analysis in clarification continuation rounds to avoid
+  // regenerating garbage analysis from the short user answer.
+  if (state.clarificationRound > 0 && state.analysis) {
+    return { phase: "match_framework" };
+  }
+
   const llm = getLLM();
   const userMessage = state.messages[state.messages.length - 1];
 

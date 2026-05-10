@@ -9,6 +9,8 @@ export async function clarifyNode(state: {
   analysis: Analysis | null;
   clarificationRound: number;
   collectedInfo: Record<string, string>;
+  clarificationHistory?: Array<{question: string; answer: string}>;
+  lastQuestion?: string | null;
   writer?: (data: unknown) => void;
 }) {
   const llm = getLLM();
@@ -24,13 +26,27 @@ export async function clarifyNode(state: {
     .map(([key, value]) => `- ${key}: ${value}`)
     .join("\n");
 
-  const userMessage = state.messages[state.messages.length - 1];
-  const userContent = typeof userMessage.content === "string" ? userMessage.content : String(userMessage.content);
+  // Record the Q&A pair from the previous round before building the prompt
+  let qaHistory = state.clarificationHistory || [];
+  if (state.clarificationRound > 0 && state.lastQuestion) {
+    const raw = state.messages[state.messages.length - 1].content;
+    const answerContent = typeof raw === "string" ? raw : String(raw);
+    qaHistory = [...qaHistory, { question: state.lastQuestion, answer: answerContent }];
+  }
+
+  // Use the original request (first message), not the last clarification answer
+  const originalRequest = typeof state.messages[0].content === "string"
+    ? state.messages[0].content
+    : String(state.messages[0].content);
+
+  const qaHistoryStr = qaHistory.length > 0
+    ? qaHistory.map((qa, i) => `Q${i + 1}: ${qa.question}\nA${i + 1}: ${qa.answer}`).join("\n\n")
+    : "暂无";
 
   const response = await llm.invoke([
     new SystemMessage(CLARIFY_SYSTEM_PROMPT),
     new HumanMessage(
-      `## 用户原始需求\n\n${userContent}\n\n## 分析结果\n\n${JSON.stringify(state.analysis, null, 2)}\n\n## 已收集的信息\n\n${collectedInfoStr || "暂无"}\n\n## 澄清轮次\n\n第 ${state.clarificationRound + 1} 轮\n\n请判断是否需要继续澄清。如果需要，只问1个最关键的问题，并给出2-3个推荐选项。`
+      `## 用户原始需求\n\n${originalRequest}\n\n## 分析结果\n\n${JSON.stringify(state.analysis, null, 2)}\n\n## 已收集的信息\n\n${collectedInfoStr || "暂无"}\n\n## 历史问答\n\n${qaHistoryStr}\n\n## 澄清轮次\n\n第 ${state.clarificationRound + 1} 轮\n\n请判断是否需要继续澄清。如果需要，只问1个最关键的问题，并给出2-3个推荐选项。`
     ),
   ]);
 
@@ -68,6 +84,7 @@ export async function clarifyNode(state: {
     return {
       clarificationComplete: true,
       collectedInfo: { ...state.collectedInfo, ...parsed.newInfo },
+      clarificationHistory: qaHistory,
       phase: "generate",
     };
   }
@@ -95,6 +112,7 @@ export async function clarifyNode(state: {
     return {
       clarificationComplete: true,
       collectedInfo: { ...state.collectedInfo, ...parsed.newInfo },
+      clarificationHistory: qaHistory,
       phase: "generate",
     };
   }
@@ -109,6 +127,7 @@ export async function clarifyNode(state: {
   return {
     clarificationRound: state.clarificationRound + 1,
     collectedInfo: { ...state.collectedInfo, ...parsed.newInfo },
+    clarificationHistory: qaHistory,
     lastQuestion: question,
     lastOptions: options,
     phase: "clarify",

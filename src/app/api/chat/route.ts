@@ -26,13 +26,19 @@ export async function POST(request: NextRequest) {
       try {
         const input: Record<string, unknown> = {
           messages: [new HumanMessage(message)],
-          phase: "analyze",
-          clarificationRound: 0,
-          clarificationComplete: false,
-          collectedInfo: {},
-          optimizedPrompt: null,
           writer,
         };
+
+        // Only seed initialization values for a brand-new thread.
+        // On continuation, the checkpoint holds the correct values.
+        if (!threadId) {
+          input.phase = "analyze";
+          input.clarificationRound = 0;
+          input.clarificationComplete = false;
+          input.collectedInfo = {};
+          input.clarificationHistory = [];
+          input.optimizedPrompt = null;
+        }
 
         if (frameworkId) {
           input.selectedFramework = { id: frameworkId, name: "", reason: "用户预选" };

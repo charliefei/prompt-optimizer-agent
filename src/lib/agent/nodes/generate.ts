@@ -30,8 +30,10 @@ export async function generateNode(state: {
     };
   }
 
-  const userMessage = state.messages[state.messages.length - 1];
-  const userContent = typeof userMessage.content === "string" ? userMessage.content : String(userMessage.content);
+  // Use the original user request (first message), not the last clarification answer
+  const originalRequest = typeof state.messages[0].content === "string"
+    ? state.messages[0].content
+    : String(state.messages[0].content);
 
   const collectedInfoStr = Object.entries(state.collectedInfo)
     .map(([key, value]) => `- ${key}: ${value}`)
@@ -40,7 +42,7 @@ export async function generateNode(state: {
   const response = await llm.invoke([
     new SystemMessage(GENERATE_SYSTEM_PROMPT),
     new HumanMessage(
-      `## 选定的框架：${state.selectedFramework?.name || "未知"}\n\n${frameworkMarkdown}\n\n## 用户需求\n\n${userContent}\n\n## 收集到的补充信息\n\n${collectedInfoStr || "无"}\n\n请根据以上框架结构和需求信息，生成优化后的提示词。`
+      `## 选定的框架：${state.selectedFramework?.name || "未知"}\n\n${frameworkMarkdown}\n\n## 用户需求\n\n${originalRequest}\n\n## 收集到的补充信息\n\n${collectedInfoStr || "无"}\n\n请根据以上框架结构和需求信息，生成优化后的提示词。`
     ),
   ]);
 
