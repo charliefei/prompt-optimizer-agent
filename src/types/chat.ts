@@ -15,6 +15,8 @@ export interface ChatMessage {
     name: string;
     reason: string;
   };
+  question?: string;
+  options?: string[];
   questions?: string[];
   timestamp: number;
 }
@@ -41,5 +43,7 @@ export interface ChatStreamEvent {
   type: MessageType;
   content?: string;
   framework?: { id: number; name: string; reason: string };
+  question?: string;
+  options?: string[];
   questions?: string[];
 }
