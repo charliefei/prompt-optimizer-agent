@@ -52,7 +52,16 @@ export async function clarifyNode(state: {
       newInfo: raw.newInfo || {},
     };
   } catch {
-    parsed = { complete: true, question: "", options: [], newInfo: {} };
+    // Parse failure: use a generic question with fallback options
+    const fallbackOpts = state.analysis
+      ? getFallbackOptions(state.analysis.ambiguities[0] || "")
+      : ["确认，按此方向继续", "需要调整方向", "以上都不对，我补充说明"];
+    parsed = {
+      complete: false,
+      question: "请补充更多上下文信息以帮助我更好地理解你的需求",
+      options: fallbackOpts,
+      newInfo: {},
+    };
   }
 
   if (parsed.complete) {
@@ -75,17 +84,32 @@ export async function clarifyNode(state: {
     }
   }
 
+  // Guard: if question is empty but we have options, synthesize a question
+  let question = parsed.question;
+  if (!question && options.length > 0) {
+    const firstAmbiguity = state.analysis?.ambiguities[0] || "需求";
+    question = `关于「${firstAmbiguity}」，请选择一个方向`;
+  }
+  // If still no question and no options, skip to generate
+  if (!question) {
+    return {
+      clarificationComplete: true,
+      collectedInfo: { ...state.collectedInfo, ...parsed.newInfo },
+      phase: "generate",
+    };
+  }
+
   // Send single clarification question with options
   state.writer?.({
     type: "clarification",
-    question: parsed.question,
+    question,
     options,
   });
 
   return {
     clarificationRound: state.clarificationRound + 1,
     collectedInfo: { ...state.collectedInfo, ...parsed.newInfo },
-    lastQuestion: parsed.question,
+    lastQuestion: question,
     lastOptions: options,
     phase: "clarify",
   };

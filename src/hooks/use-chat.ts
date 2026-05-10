@@ -83,6 +83,7 @@ export function useChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeThreadRef = useRef(activeThreadId);
   const messagesRef = useRef(messages);
+  const isStreamingRef = useRef(false);
   activeThreadRef.current = activeThreadId;
   messagesRef.current = messages;
 
@@ -132,7 +133,7 @@ export function useChat() {
 
   const sendMessage = useCallback(
     async (content: string, preselectedFramework?: string) => {
-      if (!content.trim() || isStreaming) return;
+      if (!content.trim() || isStreamingRef.current) return;
 
       const userMsg: ChatMessage = {
         id: `user-${Date.now()}`,
@@ -145,6 +146,7 @@ export function useChat() {
       const accumulated = [...messagesRef.current, userMsg];
       setMessages(accumulated);
       setIsStreaming(true);
+      isStreamingRef.current = true;
 
       const tid = ensureThread(content.trim());
 
@@ -232,9 +234,10 @@ export function useChat() {
         saveMessages(tid, [...accumulated, errorMsg]);
       } finally {
         setIsStreaming(false);
+        isStreamingRef.current = false;
       }
     },
-    [isStreaming, ensureThread]
+    [ensureThread]
   );
 
   const startNewThread = useCallback(() => {
