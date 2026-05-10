@@ -15,8 +15,11 @@ export interface ChatMessage {
     name: string;
     reason: string;
   };
+  /** Single clarifying question with selectable options (new format). Mutually exclusive with `questions`. */
   question?: string;
+  /** Recommended answer options for the single `question`. */
   options?: string[];
+  /** Multiple open-ended clarifying questions (legacy format). Prefer `question` + `options`. */
   questions?: string[];
   timestamp: number;
 }
@@ -43,7 +46,10 @@ export interface ChatStreamEvent {
   type: MessageType;
   content?: string;
   framework?: { id: number; name: string; reason: string };
+  /** Single clarifying question with selectable options (new format). Mutually exclusive with `questions`. */
   question?: string;
+  /** Recommended answer options for the single `question`. */
   options?: string[];
+  /** Multiple open-ended clarifying questions (legacy format). Prefer `question` + `options`. */
   questions?: string[];
 }
