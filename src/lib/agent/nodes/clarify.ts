@@ -22,7 +22,8 @@ export async function clarifyNode(state: {
     };
   }
 
-  const collectedInfoStr = Object.entries(state.collectedInfo)
+  const safeCollectedInfo = state.collectedInfo || {};
+  const collectedInfoStr = Object.entries(safeCollectedInfo)
     .map(([key, value]) => `- ${key}: ${value}`)
     .join("\n");
 
@@ -83,7 +84,7 @@ export async function clarifyNode(state: {
   if (parsed.complete) {
     return {
       clarificationComplete: true,
-      collectedInfo: { ...state.collectedInfo, ...parsed.newInfo },
+      collectedInfo: { ...safeCollectedInfo, ...parsed.newInfo },
       clarificationHistory: qaHistory,
       phase: "generate",
     };
@@ -111,7 +112,7 @@ export async function clarifyNode(state: {
   if (!question) {
     return {
       clarificationComplete: true,
-      collectedInfo: { ...state.collectedInfo, ...parsed.newInfo },
+      collectedInfo: { ...safeCollectedInfo, ...parsed.newInfo },
       clarificationHistory: qaHistory,
       phase: "generate",
     };
@@ -126,7 +127,7 @@ export async function clarifyNode(state: {
 
   return {
     clarificationRound: state.clarificationRound + 1,
-    collectedInfo: { ...state.collectedInfo, ...parsed.newInfo },
+    collectedInfo: { ...safeCollectedInfo, ...parsed.newInfo },
     clarificationHistory: qaHistory,
     lastQuestion: question,
     lastOptions: options,
