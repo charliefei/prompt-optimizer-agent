@@ -162,9 +162,11 @@ function ClarificationCard({
 function MessageBubble({
   message,
   onClarifyAnswer,
+  isStreaming,
 }: {
   message: ChatMessage;
   onClarifyAnswer?: (answer: string) => void;
+  isStreaming?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -220,7 +222,7 @@ function MessageBubble({
         question={message.question}
         options={message.options || []}
         onAnswer={(answer) => onClarifyAnswer?.(answer)}
-        disabled={false}
+        disabled={isStreaming ?? false}
       />
     );
   }
@@ -595,6 +597,7 @@ function ChatPageContent() {
                   key={msg.id}
                   message={msg}
                   onClarifyAnswer={(answer) => sendMessage(answer)}
+                  isStreaming={isStreaming}
                 />
               ))}
               {isStreaming && <TypingIndicator />}
