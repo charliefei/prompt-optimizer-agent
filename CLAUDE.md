@@ -9,6 +9,7 @@ npm run dev       # Start Next.js dev server
 npm run build     # Production build
 npm run start     # Start production server
 npm run lint      # Run ESLint
+npx tsc --noEmit  # Type-check
 ```
 
 ## Environment
@@ -50,6 +51,10 @@ The `/api/chat` route creates an SSE stream. All nodes receive a `writer` callba
 
 When the clarify node sends questions, the agent ends execution. The frontend resumes by sending a new request with the same `threadId` (see Gotchas).
 
+### Logging
+
+`src/lib/agent/logging.ts` provides structured logging helpers (`log`, `logError`, `logLLMInput`, `logLLMOutput`, `logState`) that emit `[Agent:<node>]` prefixed messages. All graph nodes use these for server-side debugging — grep for `[Agent:` to filter agent logs.
+
 ### Framework System
 
 57 frameworks live as markdown files in `prompt-optimizer/references/frameworks/`. Each file follows a consistent structure: `## 概述`, `## 框架构成` (table), `## 详细说明` (H3 sections), `## 优点`, `## 缺点`, `## 最佳实践`.
@@ -57,6 +62,7 @@ When the clarify node sends questions, the agent ends execution. The frontend re
 - `src/lib/frameworks/loader.ts` — Parses the summary table (`Frameworks_Summary.md`) and individual framework markdown files. Both are cached in memory after first read. The summary table format is `| 序号 | 名称 | 应用场景 |`.
 - `src/lib/frameworks/user-store.ts` — Persists user-uploaded custom frameworks as JSON files in `data/user-frameworks/`. Uses Node.js `fs` (server-only).
 - Framework matching (`src/lib/agent/tools/match-framework-tool.ts`) uses a weighted scoring algorithm: scenario overlap (30pts each), complexity match (20pts), domain match (25pts), task-type keyword match (15pts each).
+- To add a new framework: create `{NN}_Name_Framework.md` in `prompt-optimizer/references/frameworks/` with the required H2 structure, then add a row to `Frameworks_Summary.md`.
 
 ### LLM Configuration
 

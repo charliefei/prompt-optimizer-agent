@@ -34,9 +34,7 @@
 # 1. 安装依赖
 npm install
 
-# 2. 配置环境变量
-cp .env.example .env.local
-# 编辑 .env.local，填入 OPENAI_API_KEY
+# 2. 创建 .env.local 并填入配置（参见下方环境变量表）
 
 # 3. 启动开发服务器
 npm run dev
@@ -80,6 +78,8 @@ START → analyze → matchFramework → loadFramework → clarify → generate 
 - 领域匹配：+25 分
 - 任务类型关键词匹配：每个 +15 分
 
+> **添加新框架**：在 `prompt-optimizer/references/frameworks/` 中创建 `{NN}_Name_Framework.md`（遵循 `## 概述`、`## 框架构成`、`## 详细说明`、`## 优点`、`## 缺点`、`## 最佳实践` 结构），然后在 `Frameworks_Summary.md` 中新增对应行即可。
+
 ### 页面路由
 
 | 路由 | 说明 |
@@ -113,23 +113,27 @@ prompt-optimizer-agent/
 │   │   └── upload/page.tsx         # 上传页面
 │   ├── components/ui/              # Radix UI 组件封装
 │   ├── hooks/                      # useChat、useFrameworks
+│   ├── types/                      # TypeScript 类型定义
 │   └── lib/
 │       ├── agent/
-│       │   ├── graph.ts            # 状态图定义
-│       │   ├── state.ts            # 状态结构
-│       │   ├── nodes/              # 5 个核心节点
-│       │   ├── tools/              # 评分与匹配工具
+│       │   ├── graph.ts            # 状态图定义（含 loadFramework 内联节点）
+│       │   ├── state.ts            # 状态结构（Annotation.Root）
+│       │   ├── logging.ts          # 结构化日志工具
+│       │   ├── nodes/              # 5 个节点实现
+│       │   ├── tools/              # 框架评分与匹配工具
 │       │   └── prompts/            # 各节点的 LLM 提示词
 │       ├── frameworks/
 │       │   ├── loader.ts           # 框架文件解析与缓存
 │       │   └── user-store.ts       # 自定义框架持久化
-│       └── llm/client.ts           # LLM 客户端单例
+│       ├── llm/client.ts           # LLM 客户端单例
+│       └── utils.ts                # cn() 工具函数
 ├── prompt-optimizer/               # Claude Code 技能模块
 │   ├── SKILL.md                    # 技能定义
 │   └── references/frameworks/      # 57 个框架 markdown 文档（中文）
+├── docs/bugfix/                    # Bug 修复记录
 ├── data/user-frameworks/           # 用户上传的自定义框架存储
 ├── next.config.ts
-├── tailwind.config.ts
+├── postcss.config.mjs
 └── package.json
 ```
 
@@ -138,6 +142,7 @@ prompt-optimizer-agent/
 - 状态通过 `Annotation.Root` 定义，使用 `MemorySaver` 做检查点持久化
 - **澄清节点暂停执行**：`clarify` 节点发送问题后结束执行，前端发送携带相同 `threadId` 的新请求恢复
 - 所有节点通过 `writer` 回调推送 SSE 事件（`text`、`framework_recommendation`、`clarification`、`prompt_preview`、`error`）
+- 所有节点使用 `[Agent:<node>]` 前缀的结构化日志，可通过 `grep` 过滤调试
 - `@langchain/*` 包在 `next.config.ts` 中配置为 `serverExternalPackages`，避免被 webpack 打包
 
 ## 作为 Claude Code 技能使用
