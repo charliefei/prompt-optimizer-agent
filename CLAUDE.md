@@ -90,6 +90,7 @@ Bugfix documentation is maintained in [`docs/bugfix/`](docs/bugfix/). Each file 
 | Date | File | Summary |
 |------|------|---------|
 | 2026-05-10 | [clarify-state-coherence.md](docs/bugfix/2026-05-10-clarify-state-coherence.md) | Clarify node context coherence, `clarificationHistory` duplication, `activeThreadId` loss on remount, `collectedInfo` undefined guard, sidebar hydration mismatch |
+| 2026-05-11 | [agent-state-initialization.md](docs/bugfix/2026-05-11-agent-state-initialization.md) | State fields never initialized on first request (`!threadId` guard was dead code), `phase` naming inconsistency, dead `generatePromptTool`, missing `writer` feedback in error paths |
 
 ### Bugfix Document Conventions
 

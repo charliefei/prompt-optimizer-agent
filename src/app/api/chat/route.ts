@@ -3,6 +3,11 @@ import { HumanMessage } from "@langchain/core/messages";
 import { agentGraph } from "@/lib/agent/graph";
 import { randomUUID } from "crypto";
 
+// Track which threads have been initialized. On the first request for a given
+// threadId we seed all required state fields; on continuation requests the
+// checkpoint already holds the correct values.
+const initializedThreads = new Set<string>();
+
 export async function POST(request: NextRequest) {
   const { message, threadId, frameworkId } = await request.json();
 
@@ -14,6 +19,9 @@ export async function POST(request: NextRequest) {
   }
 
   const tid = threadId || randomUUID();
+  const isNew = !initializedThreads.has(tid);
+  if (isNew) initializedThreads.add(tid);
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -29,9 +37,9 @@ export async function POST(request: NextRequest) {
           writer,
         };
 
-        // Only seed initialization values for a brand-new thread.
+        // Seed initialization values for a brand-new thread.
         // On continuation, the checkpoint holds the correct values.
-        if (!threadId) {
+        if (isNew) {
           input.phase = "analyze";
           input.clarificationRound = 0;
           input.clarificationComplete = false;
