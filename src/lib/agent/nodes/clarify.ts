@@ -4,6 +4,7 @@ import { CLARIFY_SYSTEM_PROMPT } from "../prompts/clarify";
 import { getFallbackOptions } from "../prompts/fallback-options";
 import { log, logLLMInput, logLLMOutput, logState, logError, truncate } from "../logging";
 import type { Analysis } from "../state";
+import { getWriter, type AgentRunnableConfig } from "../runtime";
 
 export async function clarifyNode(state: {
   messages: { content: string | unknown }[];
@@ -13,9 +14,9 @@ export async function clarifyNode(state: {
   clarificationHistory?: Array<{question: string; answer: string}>;
   lastQuestion?: string | null;
   frameworkDetail?: string | null;
-  writer?: (data: unknown) => void;
-}) {
+}, config?: AgentRunnableConfig) {
   const llm = getLLM();
+  const writer = getWriter(config);
 
   logState("clarify", {
     round: state.clarificationRound,
@@ -32,6 +33,8 @@ export async function clarifyNode(state: {
     log("clarify", "No ambiguities in round 0, skipping clarification → generate");
     return {
       clarificationComplete: true,
+      lastQuestion: null,
+      lastOptions: null,
       phase: "generate",
     };
   }
@@ -112,6 +115,8 @@ export async function clarifyNode(state: {
       clarificationComplete: true,
       collectedInfo: { ...safeCollectedInfo, ...parsed.newInfo },
       clarificationHistory: newQAPair,
+      lastQuestion: null,
+      lastOptions: null,
       phase: "generate",
     };
   }
@@ -143,12 +148,14 @@ export async function clarifyNode(state: {
       clarificationComplete: true,
       collectedInfo: { ...safeCollectedInfo, ...parsed.newInfo },
       clarificationHistory: newQAPair,
+      lastQuestion: null,
+      lastOptions: null,
       phase: "generate",
     };
   }
 
   // Send single clarification question with options
-  state.writer?.({
+  writer?.({
     type: "clarification",
     question,
     options,
@@ -157,6 +164,7 @@ export async function clarifyNode(state: {
   log("clarify", `Asking: "${truncate(question)}" | options=[${options.join(", ")}] | → clarify (round ${state.clarificationRound + 1})`);
   return {
     clarificationRound: state.clarificationRound + 1,
+    clarificationComplete: false,
     collectedInfo: { ...safeCollectedInfo, ...parsed.newInfo },
     clarificationHistory: newQAPair,
     lastQuestion: question,

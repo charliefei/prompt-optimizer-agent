@@ -7,6 +7,7 @@ import { generateNode } from "./nodes/generate";
 import { presentNode } from "./nodes/present";
 import { loadFramework } from "@/lib/frameworks";
 import { log, logState } from "./logging";
+import { getWriter, type AgentRunnableConfig } from "./runtime";
 
 function afterClarify(state: typeof AgentState.State): string {
   const route = state.clarificationComplete ? "generate" : END;
@@ -22,7 +23,9 @@ function afterGenerate(state: typeof AgentState.State): string {
 const workflow = new StateGraph(AgentState)
   .addNode("analyze", analyzeNode)
   .addNode("matchFramework", matchFrameworkNode)
-  .addNode("loadFramework", async (state) => {
+  .addNode("loadFramework", async (state, config?: AgentRunnableConfig) => {
+    const writer = getWriter(config);
+
     logState("loadFramework", {
       hasSelectedFramework: state.selectedFramework !== null,
       frameworkId: state.selectedFramework?.id,
@@ -34,7 +37,7 @@ const workflow = new StateGraph(AgentState)
       return { phase: "clarify" };
     }
 
-    state.writer?.({ type: "text", content: "正在加载框架详情..." });
+    writer?.({ type: "text", content: "正在加载框架详情..." });
     log("loadFramework", `Loading framework id=${state.selectedFramework.id}...`);
 
     const framework = await loadFramework(state.selectedFramework.id);

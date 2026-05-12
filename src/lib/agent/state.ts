@@ -32,5 +32,4 @@ export const AgentState = Annotation.Root({
   lastQuestion: Annotation<string | null>,
   lastOptions: Annotation<string[] | null>,
   optimizedPrompt: Annotation<string | null>,
-  writer: Annotation<((data: unknown) => void) | null>,
 });

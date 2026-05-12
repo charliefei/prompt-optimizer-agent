@@ -1,12 +1,14 @@
 import { matchFrameworks } from "../tools/match-framework-tool";
 import { log, logState } from "../logging";
 import type { Analysis, FrameworkMatch } from "../state";
+import { getWriter, type AgentRunnableConfig } from "../runtime";
 
 export async function matchFrameworkNode(state: {
   analysis: Analysis | null;
   selectedFramework: FrameworkMatch | null;
-  writer?: (data: unknown) => void;
-}) {
+}, config?: AgentRunnableConfig) {
+  const writer = getWriter(config);
+
   logState("matchFramework", {
     hasAnalysis: state.analysis !== null,
     hasPreselected: state.selectedFramework !== null,
@@ -24,7 +26,7 @@ export async function matchFrameworkNode(state: {
     return { phase: "clarify" };
   }
 
-  state.writer?.({ type: "text", content: "正在匹配最合适的框架..." });
+  writer?.({ type: "text", content: "正在匹配最合适的框架..." });
 
   const matches = await matchFrameworks(state.analysis);
 
@@ -41,7 +43,7 @@ export async function matchFrameworkNode(state: {
   const top3 = matches.slice(0, 3).map((m) => `${m.name}(${m.reason})`).join(", ");
   log("matchFramework", `Top matches: [${top3}]`);
 
-  state.writer?.({
+  writer?.({
     type: "framework_recommendation",
     content: `为您推荐框架：${best.name}`,
     framework: best,

@@ -3,10 +3,38 @@ import { HumanMessage } from "@langchain/core/messages";
 import { agentGraph } from "@/lib/agent/graph";
 import { randomUUID } from "crypto";
 
-// Track which threads have been initialized. On the first request for a given
-// threadId we seed all required state fields; on continuation requests the
-// checkpoint already holds the correct values.
-const initializedThreads = new Set<string>();
+type ThreadRun = {
+  runId: string;
+  awaitingClarification: boolean;
+};
+
+// Browser chat threads can contain multiple optimization tasks. LangGraph
+// checkpoints are scoped to one optimization run, so only reuse a run while it
+// is waiting for the user's clarification answer.
+const threadRuns = new Map<string, ThreadRun>();
+
+const createInitialState = (message: string, frameworkId?: number) => {
+  const input: Record<string, unknown> = {
+    messages: [new HumanMessage(message)],
+    phase: "analyze",
+    analysis: null,
+    selectedFramework: null,
+    frameworkDetail: null,
+    clarificationRound: 0,
+    clarificationComplete: false,
+    collectedInfo: {},
+    clarificationHistory: [],
+    lastQuestion: null,
+    lastOptions: null,
+    optimizedPrompt: null,
+  };
+
+  if (frameworkId) {
+    input.selectedFramework = { id: frameworkId, name: "", reason: "用户预选" };
+  }
+
+  return input;
+};
 
 export async function POST(request: NextRequest) {
   const { message, threadId, frameworkId } = await request.json();
@@ -19,8 +47,9 @@ export async function POST(request: NextRequest) {
   }
 
   const tid = threadId || randomUUID();
-  const isNew = !initializedThreads.has(tid);
-  if (isNew) initializedThreads.add(tid);
+  const existingRun = threadRuns.get(tid);
+  const shouldResume = Boolean(existingRun?.awaitingClarification);
+  const runId = shouldResume ? existingRun!.runId : randomUUID();
 
   const encoder = new TextEncoder();
 
@@ -32,36 +61,31 @@ export async function POST(request: NextRequest) {
       };
 
       try {
-        const input: Record<string, unknown> = {
-          messages: [new HumanMessage(message)],
-          writer,
-        };
-
-        // Seed initialization values for a brand-new thread.
-        // On continuation, the checkpoint holds the correct values.
-        if (isNew) {
-          input.phase = "analyze";
-          input.clarificationRound = 0;
-          input.clarificationComplete = false;
-          input.collectedInfo = {};
-          input.clarificationHistory = [];
-          input.optimizedPrompt = null;
-        }
-
-        if (frameworkId) {
-          input.selectedFramework = { id: frameworkId, name: "", reason: "用户预选" };
-        }
+        const input: Record<string, unknown> = shouldResume
+          ? { messages: [new HumanMessage(message)] }
+          : createInitialState(message, frameworkId ? Number(frameworkId) : undefined);
 
         const config = {
-          configurable: { thread_id: tid },
+          configurable: {
+            thread_id: runId,
+            agentWriter: writer,
+          },
         };
 
         // Run the graph
-        await agentGraph.invoke(input, config);
+        const result = await agentGraph.invoke(input, config);
+        const awaitingClarification =
+          result.phase === "clarify" && result.clarificationComplete === false;
+
+        if (awaitingClarification) {
+          threadRuns.set(tid, { runId, awaitingClarification: true });
+        } else {
+          threadRuns.delete(tid);
+        }
 
         // Send done event
         const doneData = encoder.encode(
-          `event: done\ndata: ${JSON.stringify({ threadId: tid, phase: "done" })}\n\n`
+          `event: done\ndata: ${JSON.stringify({ threadId: tid, phase: result.phase || "done" })}\n\n`
         );
         controller.enqueue(doneData);
       } catch (error) {

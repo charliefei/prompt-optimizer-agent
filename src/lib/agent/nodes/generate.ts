@@ -4,6 +4,7 @@ import { loadFramework } from "@/lib/frameworks";
 import { GENERATE_SYSTEM_PROMPT } from "../prompts/generate";
 import { log, logLLMInput, logLLMOutput, logState, logError } from "../logging";
 import type { Analysis, FrameworkMatch } from "../state";
+import { getWriter, type AgentRunnableConfig } from "../runtime";
 
 export async function generateNode(state: {
   messages: { content: string | unknown }[];
@@ -11,9 +12,9 @@ export async function generateNode(state: {
   selectedFramework: FrameworkMatch | null;
   frameworkDetail: string | null;
   collectedInfo: Record<string, string>;
-  writer?: (data: unknown) => void;
-}) {
+}, config?: AgentRunnableConfig) {
   const llm = getLLM();
+  const writer = getWriter(config);
 
   logState("generate", {
     hasFrameworkDetail: (state.frameworkDetail?.length ?? 0) > 0,
@@ -22,7 +23,7 @@ export async function generateNode(state: {
     frameworkName: state.selectedFramework?.name || null,
   });
 
-  state.writer?.({ type: "text", content: "正在生成优化后的提示词..." });
+  writer?.({ type: "text", content: "正在生成优化后的提示词..." });
 
   // Load framework detail if not already loaded
   let frameworkMarkdown = state.frameworkDetail;
@@ -36,6 +37,10 @@ export async function generateNode(state: {
 
   if (!frameworkMarkdown) {
     logError("generate", "Framework detail is empty, aborting");
+    writer?.({
+      type: "error",
+      content: "无法加载框架详情，请重试。",
+    });
     return {
       optimizedPrompt: "无法加载框架详情，请重试。",
       phase: "present",
@@ -63,7 +68,7 @@ export async function generateNode(state: {
   const optimizedPrompt = typeof response.content === "string" ? response.content : String(response.content);
   logLLMOutput("generate", optimizedPrompt);
 
-  state.writer?.({
+  writer?.({
     type: "prompt_preview",
     content: optimizedPrompt,
   });

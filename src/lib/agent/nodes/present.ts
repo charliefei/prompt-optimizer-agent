@@ -3,14 +3,15 @@ import { getLLM } from "@/lib/llm/client";
 import { PRESENT_SYSTEM_PROMPT } from "../prompts/present";
 import { log, logLLMInput, logLLMOutput, logState } from "../logging";
 import type { FrameworkMatch } from "../state";
+import { getWriter, type AgentRunnableConfig } from "../runtime";
 
 export async function presentNode(state: {
   selectedFramework: FrameworkMatch | null;
   optimizedPrompt: string | null;
   collectedInfo: Record<string, string>;
-  writer?: (data: unknown) => void;
-}) {
+}, config?: AgentRunnableConfig) {
   const llm = getLLM();
+  const writer = getWriter(config);
 
   logState("present", {
     hasOptimizedPrompt: state.optimizedPrompt !== null,
@@ -21,7 +22,7 @@ export async function presentNode(state: {
 
   if (!state.optimizedPrompt) {
     log("present", "No optimized prompt, showing error → done");
-    state.writer?.({
+    writer?.({
       type: "text",
       content: "未能生成提示词，请重新描述您的需求。",
     });
@@ -44,7 +45,7 @@ export async function presentNode(state: {
   const presentation = typeof response.content === "string" ? response.content : String(response.content);
   logLLMOutput("present", presentation);
 
-  state.writer?.({
+  writer?.({
     type: "text",
     content: presentation,
   });

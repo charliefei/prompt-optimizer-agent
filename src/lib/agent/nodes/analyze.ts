@@ -3,13 +3,15 @@ import { getLLM } from "@/lib/llm/client";
 import { ANALYZE_SYSTEM_PROMPT } from "../prompts/analyze";
 import { log, logLLMInput, logLLMOutput, logState, logError, truncate } from "../logging";
 import type { Analysis } from "../state";
+import { getWriter, type AgentRunnableConfig } from "../runtime";
 
 export async function analyzeNode(state: {
   messages: { content: string }[];
   analysis: Analysis | null;
   clarificationRound: number;
-  writer?: (data: unknown) => void;
-}) {
+}, config?: AgentRunnableConfig) {
+  const writer = getWriter(config);
+
   logState("analyze", {
     phase: "analyze",
     clarificationRound: state.clarificationRound,
@@ -28,7 +30,7 @@ export async function analyzeNode(state: {
   const userMessage = state.messages[state.messages.length - 1];
   const userContent = typeof userMessage.content === "string" ? userMessage.content : String(userMessage.content);
 
-  state.writer?.({ type: "text", content: "正在分析您的需求..." });
+  writer?.({ type: "text", content: "正在分析您的需求..." });
 
   logLLMInput("analyze", ANALYZE_SYSTEM_PROMPT, userContent);
 
